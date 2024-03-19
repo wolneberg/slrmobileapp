@@ -36,6 +36,7 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
+        mlModelBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.2"
@@ -80,5 +81,15 @@ dependencies {
     implementation("androidx.camera:camera-extensions:$cameraxVersion")
 
     implementation("com.google.android.material:material:1.11.0-alpha01")
+
+    implementation("org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT")
+    // This dependency adds the necessary TF op support.
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly-SNAPSHOT")
+    implementation("org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.0.0-nightly-SNAPSHOT")
+    //implementation("org.tensorflow:tensorflow-lite:2.13.0")
+    //implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.13.0")
+    //implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    //implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
     }
 }

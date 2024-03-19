@@ -2,10 +2,14 @@ package com.example.slr
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.ContentValues.TAG
+import android.content.Context
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -67,6 +71,7 @@ class RecordActivity: ComponentActivity(){
                 }
             }
             val recordingStart : MutableState<Boolean> = remember { mutableStateOf(false) }
+            val mmr = MediaMetadataRetriever()
             BottomSheetScaffold(
                 scaffoldState = scaffoldState,
                 sheetPeekHeight = 0.dp,
@@ -112,7 +117,7 @@ class RecordActivity: ComponentActivity(){
                     ) {
                         FilledTonalButton(
                             onClick = {
-                            recordVideo(controller, recordingStart) }
+                            recordVideo(controller, recordingStart, this@RecordActivity, mmr) }
                         ) {
                             Text(text =
                             if (recordingStart.value) "Stop Recording" else "Start Recording")
@@ -126,7 +131,7 @@ class RecordActivity: ComponentActivity(){
 
 
 
-    private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>) {
+    private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>, context: Context, mmr: MediaMetadataRetriever) {
         if(recording != null) {
             recordingStart.value = false
             recording?.stop()
@@ -172,18 +177,23 @@ class RecordActivity: ComponentActivity(){
                     if(event.hasError()) {
                         recording?.close()
                         recording = null
-
+                        val msg = "Video capture failed: " + "${event.error}"
                         Toast.makeText(
                             applicationContext,
-                            "Video capture failed",
+                            msg,
                             Toast.LENGTH_LONG
                         ).show()
+                        Log.e(TAG, msg)
                     } else {
+                        val msg = "Video capture succeeded: " + "${event.outputResults.outputUri}"
+                        mmr.setDataSource(context, event.outputResults.outputUri)
+                        predict(context, mmr)
                         Toast.makeText(
                             applicationContext,
-                            "Video capture succeeded",
+                            msg,
                             Toast.LENGTH_LONG
                         ).show()
+                        Log.i(TAG, msg)
                     }
                 }
             }

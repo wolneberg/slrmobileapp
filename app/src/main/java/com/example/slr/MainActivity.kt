@@ -1,6 +1,7 @@
 package com.example.slr
 
 import android.content.Intent
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,6 +29,7 @@ class MainActivity: ComponentActivity(){
             val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) {
                 result.value = it
             }
+            val mmr = MediaMetadataRetriever()
             Column(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.Center,
@@ -52,6 +54,10 @@ class MainActivity: ComponentActivity(){
                     ) {
                         Text("Record new video")
                     }
+                }
+                if (result.value != null) {
+                    mmr.setDataSource(this@MainActivity, result.value)
+                    predict(this@MainActivity, mmr)
                 }
                 result.value?.let {image ->
                     Text(text = "Video Path: "+image.path.toString())
