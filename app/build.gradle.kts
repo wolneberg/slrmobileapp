@@ -91,5 +91,9 @@ dependencies {
     //implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.13.0")
     //implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     //implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
+
+    // choose one of the two below:
+    implementation ("com.microsoft.onnxruntime:onnxruntime-android:latest.release")  // full package
+    //implementation 'com.microsoft.onnxruntime:onnxruntime-mobile:latest.release'  // mobile package
     }
 }

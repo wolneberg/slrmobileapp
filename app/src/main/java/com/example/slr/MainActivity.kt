@@ -1,9 +1,12 @@
 package com.example.slr
 
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -22,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 
 class MainActivity: ComponentActivity(){
+     private var ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
+     private lateinit var ortSession: OrtSession
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -57,7 +62,11 @@ class MainActivity: ComponentActivity(){
                 }
                 if (result.value != null) {
                     mmr.setDataSource(this@MainActivity, result.value)
-                    predict(this@MainActivity, mmr)
+                    ortSession = ortEnv.createSession(readModel())
+                    val prediction = predict(this@MainActivity, mmr)
+                    Log.i("result", prediction.first.toString())
+                    Log.i("time", prediction.second.toString())
+                    
                 }
                 result.value?.let {image ->
                     Text(text = "Video Path: "+image.path.toString())
@@ -69,6 +78,11 @@ class MainActivity: ComponentActivity(){
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
         startActivity(intent)
+    }
+
+    private fun readModel(): ByteArray {
+        val modelId = R.raw.model
+        return resources.openRawResource(modelId).readBytes()
     }
 }
 
