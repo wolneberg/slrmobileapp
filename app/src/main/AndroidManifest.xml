@@ -26,6 +26,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".RecordActivity"> </activity>
+        <activity android:name=".StreamClassifierActivity"> </activity>
     </application>
 
 </manifest>

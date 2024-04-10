@@ -23,22 +23,27 @@ const val CHANNELS = 3
 const val NUM_FRAMES = 20
 fun predict(context: Context, mmr: MediaMetadataRetriever): Pair<FloatArray, Long> {
     val frames = videoFrames(mmr)
+    val inputbuffer = bitmapArrayToByteBuffer(frames, RESOLUTION, RESOLUTION)
     // Define the shape and data type of the TensorBuffer
     val shape = intArrayOf(BATCH_SIZE, frames.size, RESOLUTION, RESOLUTION, CHANNELS)
     // Create an empty TensorBuffer with the desired shape and data type
     val tensorBuffer = TensorBuffer.createFixedSize(shape, DataType.FLOAT32)
+    val floatinput = bitmapArrayToFloatArray(frames, RESOLUTION, RESOLUTION)
+    tensorBuffer.loadArray(floatinput)
+    Log.i("buffer size", inputbuffer.array().size.toString())
+    Log.i("float size", floatinput.size.toString())
     // Calculate the size of a single slice based on the shape of the TensorBuffer
-    val sliceSize = tensorBuffer.buffer.limit() / tensorBuffer.shape[1]
-    // Iterate over each ByteBuffer in the list and load it into the appropriate slice of the TensorBuffer
-    for (i in frames.indices) {
-        val byteBuffer = frames[i]
-        // Calculate the offset for the current slice
-        val offset = i * sliceSize
-        // Copy the contents of the ByteBuffer to the appropriate slice of the TensorBuffer
-        byteBuffer.position(0)
-        tensorBuffer.buffer.position(offset)
-        tensorBuffer.buffer.put(byteBuffer)
-    }
+//    val sliceSize = tensorBuffer.buffer.limit() / tensorBuffer.shape[1]
+//    // Iterate over each ByteBuffer in the list and load it into the appropriate slice of the TensorBuffer
+//    for (i in frames.indices) {
+//        val byteBuffer = frames[i]
+//        // Calculate the offset for the current slice
+//        val offset = i * sliceSize
+//        // Copy the contents of the ByteBuffer to the appropriate slice of the TensorBuffer
+//        byteBuffer.position(0)
+//        tensorBuffer.buffer.position(offset)
+//        tensorBuffer.buffer.put(byteBuffer)
+//    }
 
     val output = TensorBuffer.createFixedSize(intArrayOf(1, 100), DataType.FLOAT32)
     var inferenceTime = 0.toLong()
@@ -46,11 +51,15 @@ fun predict(context: Context, mmr: MediaMetadataRetriever): Pair<FloatArray, Lon
     try {
         val tfliteModel = FileUtil.loadMappedFile(context, "movinet_a1_base_04052024_091340.tflite")
         val tflite = Interpreter(tfliteModel)
-        Log.i("signature keys",tflite.signatureKeys.toString())
+//        Log.i("signature inputs",tflite.getSignatureInputs("image").toString())
+        Log.i("input 0", tflite.getInputTensor(0).shape().joinToString(separator=","))
+        Log.i("output", tflite.getOutputTensor(0).shape().joinToString(separator = ","))
+        Log.i("input 0", tflite.getInputTensor(0).dataType().toString())
         // Running inference
         val startTime = SystemClock.elapsedRealtime()
-        tflite.run(tensorBuffer.buffer, output.buffer); // må finne rikitg input her
+//        tflite.run(inputbuffer, output.buffer); // må finne rikitg input her
         inferenceTime = SystemClock.elapsedRealtime()-startTime
+        tflite.close()
     } catch (e: IOException) {
         Log.e("tfliteSupport", "Error reading model", e)
     }
@@ -58,8 +67,8 @@ fun predict(context: Context, mmr: MediaMetadataRetriever): Pair<FloatArray, Lon
     return Pair(output.floatArray, inferenceTime)
 }
 
-private fun videoFrames(mmr: MediaMetadataRetriever): List<ByteBuffer> {
-    val frames = mutableListOf<ByteBuffer>()
+private fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
+    var frames = emptyArray<Bitmap>()
     var durationMs = 0.0
 
     val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
@@ -74,8 +83,8 @@ private fun videoFrames(mmr: MediaMetadataRetriever): List<ByteBuffer> {
         if (bitmap!=null) {
             bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
             val resized = Bitmap.createScaledBitmap(bitmap, RESOLUTION, RESOLUTION,false)
-            val inputImage = bitmapToByteBuffer(resized, RESOLUTION, RESOLUTION)
-            frames.add(inputImage)
+//            val inputImage = bitmapToByteBuffer(resized, RESOLUTION, RESOLUTION)
+            frames += resized
             Log.i("Bitmap", "Registered bitmap frame at $timeUs")
         } else{
             Log.i("No bitmap", "Found no bitmap at frame: $timeUs")
@@ -84,9 +93,72 @@ private fun videoFrames(mmr: MediaMetadataRetriever): List<ByteBuffer> {
     return frames
 }
 
-private fun streamPredict(context: Context, mmr: MediaMetadataRetriever): Pair<FloatArray, Long> {
-    val result = floatArrayOf()
-    return Pair(result, 0)
+fun bitmapArrayToByteBuffer(
+    bitmaps: Array<Bitmap>,
+    width: Int,
+    height: Int,
+    mean: Float = 0.0f,
+    std: Float = 255.0f
+): ByteBuffer {
+    val totalBytes = bitmaps.size * width * height * 3 * 4 // Check your case for 20 Bitmaps
+    val inputImage = ByteBuffer.allocateDirect(totalBytes)
+    inputImage.order(ByteOrder.nativeOrder())
+
+    for (bitmap in bitmaps) {
+        val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        val intValues = IntArray(width * height)
+        scaledBitmap.getPixels(intValues, 0, width, 0, 0, width, height)
+
+        // Normalize and add pixels for each Bitmap
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val value = intValues[y * width + x]
+                inputImage.putFloat(((value shr 16 and 0xFF) - mean) / std)
+                inputImage.putFloat(((value shr 8 and 0xFF) - mean) / std)
+                inputImage.putFloat(((value and 0xFF) - mean) / std)
+            }
+        }
+
+        scaledBitmap.recycle()  // Free memory after processing
+    }
+
+    inputImage.rewind()
+    return inputImage
+}
+
+fun bitmapArrayToFloatArray(
+    bitmaps: Array<Bitmap>,
+    width: Int,
+    height: Int,
+    mean: Float = 0.0f,
+    std: Float = 255.0f
+): FloatArray {
+    val totalPixels = bitmaps.size * width * height * 3
+    val floatArray = FloatArray(totalPixels)
+
+    var index = 0
+
+    for (bitmap in bitmaps) {
+        if (!bitmap.isRecycled) {
+            val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+            val intValues = IntArray(width * height)
+            scaledBitmap.getPixels(intValues, 0, width, 0, 0, width, height)
+
+            // Normalize and add pixels for each Bitmap
+            for (y in 0 until height) {
+                for (x in 0 until width) {
+                    val value = intValues[y * width + x]
+                    floatArray[index++] = ((value shr 16 and 0xFF) - mean) / std
+                    floatArray[index++] = ((value shr 8 and 0xFF) - mean) / std
+                    floatArray[index++] = ((value and 0xFF) - mean) / std
+                }
+            }
+
+            scaledBitmap.recycle()  // Free memory after processing
+        }
+    }
+
+    return floatArray
 }
 
 // https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt

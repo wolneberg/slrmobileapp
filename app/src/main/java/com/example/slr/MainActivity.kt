@@ -59,6 +59,13 @@ class MainActivity: ComponentActivity(){
                     ) {
                         Text("Record new video")
                     }
+                    FilledTonalButton(
+                        onClick = {
+                            goToStream()
+                        }
+                    ) {
+                        Text("Stream classification")
+                    }
                 }
                 if (result.value != null) {
                     mmr.setDataSource(this@MainActivity, result.value)
@@ -80,6 +87,10 @@ class MainActivity: ComponentActivity(){
         startActivity(intent)
     }
 
+    private fun goToStream(){
+        val intent = Intent(this, StreamClassifierActivity::class.java)
+        startActivity(intent)
+    }
     private fun readModel(): ByteArray {
         val modelId = R.raw.model
         return resources.openRawResource(modelId).readBytes()

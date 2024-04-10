@@ -91,6 +91,7 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
 
     // choose one of the two below:
     implementation ("com.microsoft.onnxruntime:onnxruntime-android:latest.release")  // full package
