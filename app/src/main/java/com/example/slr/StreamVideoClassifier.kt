@@ -2,7 +2,8 @@ package com.example.slr
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import android.media.MediaMetadataRetriever
+import android.os.SystemClock
 import android.util.Size
 import org.tensorflow.lite.DataType
 import org.tensorflow.lite.Interpreter
@@ -34,33 +35,11 @@ import kotlin.math.min
  * limitations under the License.
  */
 
-//    (
-//    private val classifier: StreamClassifier,
-//    private val onResults: (List<Classification>) -> Unit
-//): ImageAnalysis.Analyzer {
-//
-//    override fun analyze(image: ImageProxy) {
-//        val rotationDegrees = image.imageInfo.rotationDegrees
-//        val bitmap = image.toBitmap()
-//        val resized = Bitmap.createScaledBitmap(bitmap, RESOLUTION, RESOLUTION,false)
-//
-//        val results = classifier.classifyFrame(resized, rotationDegrees)
-//        onResults(results)
-//
-//        image.close()
-//    }
-
 class StreamVideoClassifier private constructor(
      private val interpreter: Interpreter,
      private val labels: List<String>,
      private val maxResults: Int?
 ) {
-//    private val inputShape = interpreter
-//        .getInputTensor(0)
-//        .shape()
-//    private val outputCategoryCount = interpreter
-//        .getOutputTensor(0)
-//        .shape()[1]
     private val inputShape = interpreter
     .getInputTensorFromSignature(IMAGE_INPUT_NAME, SIGNATURE_KEY)
     .shape()
@@ -100,9 +79,6 @@ class StreamVideoClassifier private constructor(
     }
 
     init {
-
-        Log.i("input", inputShape.joinToString(","))
-        Log.i("output", outputCategoryCount.toString())
         if (outputCategoryCount != labels.size)
             throw java.lang.IllegalArgumentException(
                 "Label list size doesn't match with model output shape " +
@@ -138,7 +114,6 @@ class StreamVideoClassifier private constructor(
         val outputs = HashMap<String, Any>()
         for (outputName in interpreter.getSignatureOutputs(SIGNATURE_KEY)) {
             // Initialize a ByteBuffer to store the output of the TFLite model.
-            Log.i("outputname", outputName)
             val tensor = interpreter.getOutputTensorFromSignature(outputName, SIGNATURE_KEY)
             val byteBuffer = ByteBuffer.allocateDirect(tensor.numBytes())
             byteBuffer.order(ByteOrder.nativeOrder())
@@ -147,59 +122,6 @@ class StreamVideoClassifier private constructor(
 
         return outputs
     }
-
-//    /**
-//     * Run classify and return a list include action and score.
-//     */
-//    fun classify(inputBitmap: Bitmap): List<Category> {
-//        // As this model is stateful, ensure there's only one inference going on at once.
-//        synchronized(lock) {
-//            // Prepare inputs.
-//            val tensorImage = preprocessInputImage(inputBitmap)
-//            inputState[IMAGE_INPUT_NAME] = tensorImage.buffer
-//
-//            // Initialize a placeholder to store the output objects.
-//            val outputs = initializeOutput()
-//
-//            // Run inference using the TFLite model.
-//            interpreter.runSignature(inputState, outputs)
-//
-//            // Post-process the outputs.
-//            var categories = postprocessOutputLogits(outputs[LOGITS_OUTPUT_NAME] as ByteBuffer)
-//
-//            // Store the output states to feed as input for the next frame.
-//            outputs.remove(LOGITS_OUTPUT_NAME)
-//            inputState = outputs
-//
-//            // Sort the output and return only the top K results.
-//            categories.sortByDescending { it.score }
-//
-//            // Take only maxResults number of result.
-//            maxResults?.let {
-//                categories = categories.subList(0, max(maxResults, categories.size))
-//            }
-//
-//            return categories
-//        }
-//    }
-//
-//    /**
-//     * Return the input size required by the model.
-//     */
-//    fun getInputSize(): Size {
-//        return Size(inputWidth, inputHeight)
-//    }
-//
-//    /**
-//     * Convert input bitmap to TensorImage and normalize.
-//     */
-//    private fun preprocessInputImage(bitmap: Bitmap): TensorImage {
-//        val resized = Bitmap.createScaledBitmap(bitmap, RESOLUTION, RESOLUTION,false)
-//        val imageProcessor = ImageProcessor.Builder().build()
-//        val tensorImage = TensorImage(DataType.FLOAT32)
-//        tensorImage.load(bitmap)
-//        return imageProcessor.process(tensorImage)
-//    }
 
     /**
      * Run classify and return a list include action and score.
@@ -233,6 +155,38 @@ class StreamVideoClassifier private constructor(
             }
             return categories
         }
+    }
+
+    /**
+     * Run classify on a video and return a list include action and score.
+     */
+    fun classifyVideo(mmr: MediaMetadataRetriever): Pair<List<Category>, Long>{
+        val frames = videoFrames(mmr)
+        val tensorvideo = bitmapArrayToByteBuffer(frames, 172, 172)
+        inputState[IMAGE_INPUT_NAME] = tensorvideo
+
+        // Initialize a placeholder to store the output objects.
+        val outputs = initializeOutput()
+
+        // Run inference using the TFLite model.
+        val startTime = SystemClock.elapsedRealtime()
+        interpreter.runSignature(inputState, outputs)
+        val inferenceTime = SystemClock.elapsedRealtime()-startTime
+        // Post-process the outputs.
+        var categories = postprocessOutputLogits(outputs[LOGITS_OUTPUT_NAME] as ByteBuffer)
+
+        // Store the output states to feed as input for the next frame.
+        outputs.remove(LOGITS_OUTPUT_NAME)
+        inputState = outputs
+
+        // Sort the output and return only the top K results.
+        categories.sortByDescending { it.score }
+
+        // Take only maxResults number of result.
+        maxResults?.let {
+            categories = categories.subList(0, max(maxResults, categories.size))
+        }
+        return Pair(categories, inferenceTime)
     }
 
     /**

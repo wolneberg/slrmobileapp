@@ -187,7 +187,7 @@ class RecordActivity: ComponentActivity(){
                     } else {
                         val msg = "Video capture succeeded: " + "${event.outputResults.outputUri}"
                         mmr.setDataSource(context, event.outputResults.outputUri)
-                        predict(context, mmr)
+//                        predict(context, mmr)
                         Toast.makeText(
                             applicationContext,
                             msg,

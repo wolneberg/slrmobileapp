@@ -39,9 +39,9 @@ class StreamClassifierActivity : AppCompatActivity() {
         private const val REQUEST_CODE_PERMISSIONS = 10
         private const val TAG = "TFLite-VidClassify"
         private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
-        private const val MAX_RESULT = 3
-        private const val MODEL_FILE = "movinet_a0_stream_int8.tflite"
-        private const val MODEL_LABEL_FILE = "kinetics600_label_map.txt"
+        private const val MAX_RESULT = 5
+        private const val MODEL_A0_FILE = "04112024-011530.tflite"
+        private const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
         private const val MODEL_FPS = 5 // Ensure the input images are fed to the model at this fps.
         private const val MODEL_FPS_ERROR_RANGE = 0.1 // Acceptable error range in fps.
         private const val MAX_CAPTURE_FPS = 20
@@ -317,7 +317,7 @@ class StreamClassifierActivity : AppCompatActivity() {
                     .setMaxResult(MAX_RESULT)
                     .setNumThreads(numThread)
                     .build()
-            val modelFile = MODEL_FILE
+            val modelFile = MODEL_A0_FILE
 
             videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
                 this,
