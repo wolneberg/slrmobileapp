@@ -26,14 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
-class MainActivity: ComponentActivity(){
 
-    companion object {
-        private const val TAG = "TFLite-VidClassify"
-        private const val MAX_RESULT = 5
-        private const val MODEL_A0_FILE = "14042024-161543.tflite"
-        private const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
-    }
+const val TAG = "TFLite-VidClassify"
+const val MAX_RESULT = 5
+const val MODEL_A0_FILE = "14042024-161543.tflite"
+const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
+class MainActivity: ComponentActivity(){
 
     private var videoClassifier: StreamVideoClassifier? = null
     private var numThread = 1
@@ -103,7 +101,6 @@ class MainActivity: ComponentActivity(){
                     Text(text = "Inference time: ${results?.second} ms")
                     Text(text = "Process and inference time: $processTime ms")
                 }
-
             }
         }
     }
@@ -141,6 +138,5 @@ class MainActivity: ComponentActivity(){
         )
 
         Log.d(TAG, "Classifier created.")
-        Log.i(TAG, videoClassifier?.getInputSize().toString())
     }
 }
