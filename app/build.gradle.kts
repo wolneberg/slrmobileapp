@@ -48,8 +48,6 @@ android {
     }
 
 dependencies {
-    implementation("androidx.constraintlayout:constraintlayout:2.2.0-alpha13")
-
     implementation("androidx.core:core-ktx:1.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.7.2")
@@ -83,19 +81,8 @@ dependencies {
 
     implementation("com.google.android.material:material:1.11.0-alpha01")
 
-//    implementation("org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT")
-    // This dependency adds the necessary TF op support.
-//    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly-SNAPSHOT")
-//    implementation("org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT")
-//    implementation("org.tensorflow:tensorflow-lite-metadata:0.0.0-nightly-SNAPSHOT")
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
-    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
-    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
-
-    // choose one of the two below:
-    implementation ("com.microsoft.onnxruntime:onnxruntime-android:latest.release")  // full package
-    //implementation 'com.microsoft.onnxruntime:onnxruntime-mobile:latest.release'  // mobile package
     }
 }
