@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
-
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
 const val MODEL_A0_FILE = "14042024-161543.tflite"
@@ -74,17 +73,6 @@ class MainActivity: ComponentActivity(){
                         Text("Record new video")
                     }
                 }
-                Row (
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    FilledTonalButton(
-                        onClick = {
-                            goToStream()
-                        }
-                    ) {
-                        Text("Stream classification")
-                    }
-                }
                 if (result.value != null) {
                     val startTime = SystemClock.elapsedRealtime()
                     mmr.setDataSource(this@MainActivity, result.value)
@@ -107,11 +95,6 @@ class MainActivity: ComponentActivity(){
 
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
-        startActivity(intent)
-    }
-
-    @OptIn(ExperimentalGetImage::class) private fun goToStream(){
-        val intent = Intent(this, StreamClassifierActivity::class.java)
         startActivity(intent)
     }
 

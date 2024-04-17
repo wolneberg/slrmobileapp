@@ -2,22 +2,19 @@ package com.example.slr
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Matrix
+import android.graphics.RectF
 import android.media.MediaMetadataRetriever
 import android.os.SystemClock
-import android.util.Size
-import org.tensorflow.lite.DataType
+import android.util.Log
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
-import org.tensorflow.lite.support.common.ops.NormalizeOp
-import org.tensorflow.lite.support.image.ImageProcessor
-import org.tensorflow.lite.support.image.TensorImage
-import org.tensorflow.lite.support.image.ops.ResizeOp
-import org.tensorflow.lite.support.image.ops.ResizeWithCropOrPadOp
 import org.tensorflow.lite.support.label.Category
+import java.math.RoundingMode
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.math.exp
 import kotlin.math.max
-import kotlin.math.min
 
 /*
  * Copyright 2022 The TensorFlow Authors. All Rights Reserved.
@@ -40,23 +37,15 @@ class StreamVideoClassifier private constructor(
      private val labels: List<String>,
      private val maxResults: Int?
 ) {
-    private val inputShape = interpreter
-    .getInputTensorFromSignature(IMAGE_INPUT_NAME, SIGNATURE_KEY)
-    .shape()
     private val outputCategoryCount = interpreter
         .getOutputTensorFromSignature(LOGITS_OUTPUT_NAME, SIGNATURE_KEY)
         .shape()[1]
-    private val inputHeight = inputShape[2]
-    private val inputWidth = inputShape[3]
     private var inputState = HashMap<String, Any>()
-    private val lock = Any()
 
     companion object {
         private const val IMAGE_INPUT_NAME = "image"
         private const val LOGITS_OUTPUT_NAME = "logits"
         private const val SIGNATURE_KEY = "serving_default"
-        private const val INPUT_MEAN = 0f
-        private const val INPUT_STD = 255f
 
         fun createFromFileAndLabelsAndOptions(
             context: Context,
@@ -124,40 +113,6 @@ class StreamVideoClassifier private constructor(
     }
 
     /**
-     * Run classify and return a list include action and score.
-     */
-    fun classify(inputBitmap: Bitmap): List<Category> {
-        // As this model is stateful, ensure there's only one inference going on at once.
-        synchronized(lock) {
-            // Prepare inputs.
-            val tensorImage = preprocessInputImage(inputBitmap)
-            inputState[IMAGE_INPUT_NAME] = tensorImage.buffer
-
-            // Initialize a placeholder to store the output objects.
-            val outputs = initializeOutput()
-
-            // Run inference using the TFLite model.
-            interpreter.runSignature(inputState, outputs)
-
-            // Post-process the outputs.
-            var categories = postprocessOutputLogits(outputs[LOGITS_OUTPUT_NAME] as ByteBuffer)
-
-            // Store the output states to feed as input for the next frame.
-            outputs.remove(LOGITS_OUTPUT_NAME)
-            inputState = outputs
-
-            // Sort the output and return only the top K results.
-            categories.sortByDescending { it.score }
-
-            // Take only maxResults number of result.
-            maxResults?.let {
-                categories = categories.subList(0, max(maxResults, categories.size))
-            }
-            return categories
-        }
-    }
-
-    /**
      * Run classify on a video and return a list include action and score.
      */
     fun classifyVideo(mmr: MediaMetadataRetriever): Pair<List<Category>, Long>{
@@ -190,28 +145,6 @@ class StreamVideoClassifier private constructor(
     }
 
     /**
-     * Return the input size required by the model.
-     */
-    fun getInputSize(): Size {
-        return Size(inputWidth, inputHeight)
-    }
-
-    /**
-     * Convert input bitmap to TensorImage and normalize.
-     */
-    private fun preprocessInputImage(bitmap: Bitmap): TensorImage {
-        val size = min(bitmap.width, bitmap.height)
-        val imageProcessor = ImageProcessor.Builder().apply {
-            add(ResizeWithCropOrPadOp(size, size))
-            add(ResizeOp(inputHeight, inputWidth, ResizeOp.ResizeMethod.BILINEAR))
-            add(NormalizeOp(INPUT_MEAN, INPUT_STD))
-        }.build()
-        val tensorImage = TensorImage(DataType.FLOAT32)
-        tensorImage.load(bitmap)
-        return imageProcessor.process(tensorImage)
-    }
-
-    /**
      * Convert output logits of the model to a list of Category objects.
      */
     private fun postprocessOutputLogits(logitsByteBuffer: ByteBuffer): MutableList<Category> {
@@ -221,7 +154,7 @@ class StreamVideoClassifier private constructor(
         logitsByteBuffer.asFloatBuffer().get(logits)
 
         // Convert logits into probability list.
-        val probabilities = CalculateUtils.softmax(logits)
+        val probabilities = softmax(logits)
 
         // Append label name to form a list of Category objects.
         val categories = mutableListOf<Category>()
@@ -238,21 +171,7 @@ class StreamVideoClassifier private constructor(
         interpreter.close()
     }
 
-    /**
-     * Clear the internal state of the model.
-     *
-     * Call this function if the future inputs is unrelated to the past inputs. (e.g. when changing
-     * to a new video sequence)
-     */
-    fun reset() {
-        // Ensure that no inference is running when the state is being cleared.
-        synchronized(lock) {
-            inputState = initializeInput()
-        }
-    }
-
     class StreamVideoClassifierOptions private constructor(
-        val numThreads: Int,
         val maxResults: Int
     ) {
         companion object {
@@ -277,8 +196,110 @@ class StreamVideoClassifier private constructor(
             }
 
             fun build(): StreamVideoClassifierOptions {
-                return StreamVideoClassifierOptions(this.numThreads, this.maxResult)
+                return StreamVideoClassifierOptions(this.maxResult)
             }
         }
     }
+}
+
+fun softmax(floatArray: FloatArray): FloatArray {
+    var total = 0f
+    val result = FloatArray(floatArray.size)
+    for (i in floatArray.indices) {
+        result[i] = exp(floatArray[i])
+        total += result[i]
+    }
+
+    for (i in result.indices) {
+        result[i] /= total
+    }
+    return result
+}
+
+const val NUM_FRAMES = 20
+
+fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
+    var frames = emptyArray<Bitmap>()
+    var durationMs = 0.0
+
+    val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+    if (duration !=null) {
+        durationMs = duration.toDouble()
+    }
+
+    val frameStep = (durationMs/ NUM_FRAMES).toBigDecimal().setScale(2, RoundingMode.DOWN).toDouble()
+    for (i in 0 until NUM_FRAMES){
+        val timeUs = (i*frameStep)
+        val bitmap = mmr.getFrameAtTime(timeUs.toLong())
+        if (bitmap!=null) {
+            frames += bitmap
+        } else{
+            Log.d("No bitmap", "Found no bitmap at frame: $timeUs")
+        }
+
+    }
+    return frames
+}
+
+fun bitmapArrayToByteBuffer(
+    bitmaps: Array<Bitmap>,
+    width: Int,
+    height: Int,
+    mean: Float = 0.0f,
+    std: Float = 255.0f
+): ByteBuffer {
+    val totalBytes = bitmaps.size * width * height * 3 * 4 // Check your case for 20 Bitmaps
+    val inputImage = ByteBuffer.allocateDirect(totalBytes)
+    inputImage.order(ByteOrder.nativeOrder())
+
+    for (bitmap in bitmaps) {
+        val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        val intValues = IntArray(width * height)
+        scaledBitmap.getPixels(intValues, 0, width, 0, 0, width, height)
+
+        // Normalize and add pixels for each Bitmap
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val value = intValues[y * width + x]
+                inputImage.putFloat(((value shr 16 and 0xFF) - mean) / std)
+                inputImage.putFloat(((value shr 8 and 0xFF) - mean) / std)
+                inputImage.putFloat(((value and 0xFF) - mean) / std)
+            }
+        }
+
+        scaledBitmap.recycle()  // Free memory after processing
+    }
+
+    inputImage.rewind()
+    return inputImage
+}
+
+// https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+fun scaleBitmapAndKeepRatio(
+    targetBmp: Bitmap,
+    reqHeightInPixels: Int,
+    reqWidthInPixels: Int
+): Bitmap {
+    if (targetBmp.height == reqHeightInPixels && targetBmp.width == reqWidthInPixels) {
+        return targetBmp
+    }
+    val matrix = Matrix()
+    matrix.setRectToRect(
+        RectF(
+            0f, 0f,
+            targetBmp.width.toFloat(),
+            targetBmp.width.toFloat()
+        ),
+        RectF(
+            0f, 0f,
+            reqWidthInPixels.toFloat(),
+            reqHeightInPixels.toFloat()
+        ),
+        Matrix.ScaleToFit.FILL
+    )
+    return Bitmap.createBitmap(
+        targetBmp, 0, 0,
+        targetBmp.width,
+        targetBmp.width, matrix, true
+    )
 }
