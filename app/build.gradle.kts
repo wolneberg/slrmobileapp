@@ -36,6 +36,7 @@ android {
     buildFeatures {
         viewBinding = true
         compose = true
+        mlModelBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.2"
@@ -66,6 +67,7 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.1")
 
     implementation("io.coil-kt:coil-compose:2.6.0")
 
@@ -80,5 +82,20 @@ dependencies {
     implementation("androidx.camera:camera-extensions:$cameraxVersion")
 
     implementation("com.google.android.material:material:1.11.0-alpha01")
+
+//    implementation("org.tensorflow:tensorflow-lite:0.0.0-nightly-SNAPSHOT")
+    // This dependency adds the necessary TF op support.
+//    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:0.0.0-nightly-SNAPSHOT")
+//    implementation("org.tensorflow:tensorflow-lite-support:0.0.0-nightly-SNAPSHOT")
+//    implementation("org.tensorflow:tensorflow-lite-metadata:0.0.0-nightly-SNAPSHOT")
+    implementation("org.tensorflow:tensorflow-lite:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-select-tf-ops:2.14.0")
+    implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+
+    // choose one of the two below:
+    implementation ("com.microsoft.onnxruntime:onnxruntime-android:latest.release")  // full package
+    //implementation 'com.microsoft.onnxruntime:onnxruntime-mobile:latest.release'  // mobile package
     }
 }

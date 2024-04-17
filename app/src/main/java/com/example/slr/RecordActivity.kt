@@ -2,14 +2,20 @@ package com.example.slr
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Recording
@@ -19,12 +25,15 @@ import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.video.AudioConfig
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material3.BottomSheetScaffold
@@ -40,15 +49,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.tensorflow.lite.support.label.Category
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 
 class RecordActivity: ComponentActivity(){
+
+    companion object {
+        private val CAMERAX_PERMISSIONS = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
+        )
+    }
+
+    private var videoClassifier: StreamVideoClassifier? = null
+    private var numThread = 1
     private var recording: Recording? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +88,10 @@ class RecordActivity: ComponentActivity(){
                 }
             }
             val recordingStart : MutableState<Boolean> = remember { mutableStateOf(false) }
+            val results: MutableState<Pair<List<Category>, Long>?> = remember{mutableStateOf(null) }
+            val processTime: MutableState<Long?> = remember{ mutableStateOf(null) }
+            val mmr = MediaMetadataRetriever()
+            createClassifier()
             BottomSheetScaffold(
                 scaffoldState = scaffoldState,
                 sheetPeekHeight = 0.dp,
@@ -79,7 +104,9 @@ class RecordActivity: ComponentActivity(){
                     .fillMaxSize()
                     .padding(padding)){
                     CameraPreview(controller = controller,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .size(500.dp)
+                            .align(Alignment.TopCenter)
                     )
                     IconButton(
                         onClick = {
@@ -103,30 +130,58 @@ class RecordActivity: ComponentActivity(){
                                 .offset((-16).dp, 16.dp)
                                 .align(Alignment.TopEnd))
                     }
+                    Log.d(TAG, results.value?.second.toString())
+                    if (results.value != null) {
+                        Column (
+                            modifier = Modifier.fillMaxWidth().offset(0.dp, (-150).dp).align(Alignment.BottomCenter),
+                            verticalArrangement = Arrangement.Top,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(text = "Label: "+ results.value?.first?.get(0)?.label +
+                                    ", Score: "+results.value?.first?.get(0)?.score,
+                                fontWeight = FontWeight.ExtraBold)
+                            Text(text = "Label: "+ results.value?.first?.get(1)?.label +
+                                    ", Score: "+results.value?.first?.get(1)?.score)
+                            Text(text = "Label: "+ results.value?.first?.get(2)?.label +
+                                    ", Score: "+results.value?.first?.get(2)?.score)
+                            Text(text = "Inference time: ${results.value?.second} ms")
+                            Text(text = "Process and inference time: ${processTime.value} ms")
+                        }
+                    }
+                    IconButton(
+                        onClick = { goBack() },
+                        modifier = Modifier
+                            .offset(16.dp, (-16).dp)
+                            .align(Alignment.BottomStart)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Go back"
+                        )
+                    }
                     Row (
                         modifier = Modifier
                             .fillMaxWidth()
                             .align(Alignment.BottomCenter)
                             .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceAround
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         FilledTonalButton(
                             onClick = {
-                            recordVideo(controller, recordingStart) }
+                                recordVideo(controller, recordingStart, this@RecordActivity, mmr, results, processTime) }
                         ) {
                             Text(text =
                             if (recordingStart.value) "Stop Recording" else "Start Recording")
                         }
                     }
-
                 }
             }
         }
     }
 
-
-
-    private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>) {
+    private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>,
+                            context: Context, mmr: MediaMetadataRetriever,
+                            results: MutableState<Pair<List<Category>,Long>?>, processTime: MutableState<Long?>){
         if(recording != null) {
             recordingStart.value = false
             recording?.stop()
@@ -137,7 +192,6 @@ class RecordActivity: ComponentActivity(){
         if(!hasRequiredPermissions()) {
             return
         }
-
         recordingStart.value = true
 
         // File options
@@ -172,227 +226,62 @@ class RecordActivity: ComponentActivity(){
                     if(event.hasError()) {
                         recording?.close()
                         recording = null
-
+                        val msg = "Video capture failed: " + "${event.error}"
                         Toast.makeText(
                             applicationContext,
-                            "Video capture failed",
+                            msg,
                             Toast.LENGTH_LONG
                         ).show()
+                        Log.e(TAG, msg)
                     } else {
+                        val msg = "Video capture succeeded: " + "${event.outputResults.outputUri}"
+                        val startTime = SystemClock.elapsedRealtime()
+                        mmr.setDataSource(context, event.outputResults.outputUri)
+                        results.value = videoClassifier?.classifyVideo(mmr)
+                        processTime.value = SystemClock.elapsedRealtime() - startTime
+                        Log.d(TAG, "Finished classifying video")
                         Toast.makeText(
                             applicationContext,
-                            "Video capture succeeded",
+                            msg,
                             Toast.LENGTH_LONG
                         ).show()
+                        Log.i(TAG, msg)
                     }
                 }
             }
         }
+    }
+    private fun goBack(){
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
     }
     private fun hasRequiredPermissions(): Boolean{
         return CAMERAX_PERMISSIONS.all { ContextCompat.checkSelfPermission(
             applicationContext, it
         ) == PackageManager.PERMISSION_GRANTED }
     }
-    companion object {
-        private val CAMERAX_PERMISSIONS = arrayOf(
-            Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
+    /**
+     * Initialize the TFLite video classifier.
+     */
+    @androidx.annotation.OptIn(ExperimentalGetImage::class) private  fun createClassifier() {
+        if (videoClassifier != null) {
+            videoClassifier?.close()
+            videoClassifier = null
+        }
+        val options =
+            StreamVideoClassifier.StreamVideoClassifierOptions.builder()
+                .setMaxResult(MAX_RESULT)
+                .setNumThreads(numThread)
+                .build()
+        val modelFile = MODEL_A0_FILE
+
+        videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
+            this,
+            modelFile,
+            MODEL_LABEL_FILE,
+            options
         )
+
+        Log.d(TAG, "Classifier created.")
     }
 }
-
-/*
-class RecordActivity: AppCompatActivity() {
-    private lateinit var viewBinding: ActivityRecordBinding
-
-    private var videoCapture: VideoCapture<Recorder>? = null
-    private var recording: Recording? = null
-
-    private lateinit var cameraExecutor: ExecutorService
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        viewBinding = ActivityRecordBinding.inflate(layoutInflater)
-        setContentView(viewBinding.root)
-
-        // Request camera permissions
-        if (allPermissionsGranted()) {
-            startCamera()
-        } else {
-            requestPermissions()
-        }
-
-        // Set up the listeners for video capture button
-        viewBinding.videoCaptureButton.setOnClickListener { captureVideo() }
-
-        cameraExecutor = Executors.newSingleThreadExecutor()
-    }
-
-    // Implements VideoCapture use case, including start and stop capturing.
-    private fun captureVideo() {
-        val videoCapture = this.videoCapture ?: return
-
-        viewBinding.videoCaptureButton.isEnabled = false
-
-        val curRecording = recording
-        if (curRecording != null) {
-            // Stop the current recording session.
-            curRecording.stop()
-            recording = null
-            return
-        }
-
-        // create and start a new recording session
-        val name = SimpleDateFormat(FILENAME_FORMAT, Locale.US)
-            .format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/SLRvideo")
-            }
-        }
-
-        // MediaStore output options for saving to the androids device photo gallery
-        val mediaStoreOutputOptions = MediaStoreOutputOptions
-            .Builder(contentResolver, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
-            .setContentValues(contentValues)
-            .build()
-
-        // File output options for saving video as file
-        /*
-        val path = this.getExternalFilesDir(null)
-        val file = File(path,"/video.mp4")
-
-        Log.i("File path", file.absolutePath)
-        Log.i("Can write", file.canWrite().toString())
-        val fileOutputOptions = FileOutputOptions.Builder(file).build()
-        */
-        recording = videoCapture.output
-            .prepareRecording(this, mediaStoreOutputOptions)
-            .apply {
-                if (PermissionChecker.checkSelfPermission(this@RecordActivity,
-                        Manifest.permission.RECORD_AUDIO) ==
-                    PermissionChecker.PERMISSION_GRANTED)
-                {
-                    withAudioEnabled()
-                }
-            }
-            .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
-                when(recordEvent) {
-                    is VideoRecordEvent.Start -> {
-                        viewBinding.videoCaptureButton.apply {
-                            text = getString(R.string.stop_capture)
-                            isEnabled = true
-                        }
-                    }
-                    is VideoRecordEvent.Finalize -> {
-                        if (!recordEvent.hasError()) {
-                            val msg = "Video capture succeeded: " +
-                                    "${recordEvent.outputResults.outputUri}"
-                            Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT)
-                                .show()
-                            Log.d(TAG, msg)
-                        } else {
-                            recording?.close()
-                            recording = null
-                            Log.e(TAG, "Video capture ends with error: " +
-                                    "${recordEvent.error}")
-                        }
-                        viewBinding.videoCaptureButton.apply {
-                            text = getString(R.string.start_capture)
-                            isEnabled = true
-                        }
-                    }
-                }
-            }
-    }
-
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        cameraProviderFuture.addListener({
-            // Used to bind the lifecycle of cameras to the lifecycle owner
-            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
-
-            // Preview
-            val preview = Preview.Builder()
-                .build()
-                .also {
-                    it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
-                }
-
-
-            val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
-                .build()
-            videoCapture = VideoCapture.withOutput(recorder)
-
-            // Select back camera as a default
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            try {
-                // Unbind use cases before rebinding
-                cameraProvider.unbindAll()
-
-                // Bind use cases to camera
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, videoCapture)
-
-            } catch(exc: Exception) {
-                Log.e(TAG, "Use case binding failed", exc)
-            }
-
-        }, ContextCompat.getMainExecutor(this))
-    }
-
-    private fun requestPermissions() {
-        activityResultLauncher.launch(REQUIRED_PERMISSIONS)
-    }
-
-    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
-        ContextCompat.checkSelfPermission(
-            baseContext, it) == PackageManager.PERMISSION_GRANTED
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        cameraExecutor.shutdown()
-    }
-
-    companion object {
-        private const val TAG = "SLRApp"
-        private const val FILENAME_FORMAT = "yyyy-MM-dd-HH-mm-ss-SSS"
-        private val REQUIRED_PERMISSIONS =
-            mutableListOf (
-                Manifest.permission.CAMERA,
-                Manifest.permission.RECORD_AUDIO
-            ).apply {
-                if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
-                    add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                }
-            }.toTypedArray()
-    }
-
-    private val activityResultLauncher =
-        registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions())
-        { permissions ->
-            // Handle Permission granted/rejected
-            var permissionGranted = true
-            permissions.entries.forEach {
-                if (it.key in REQUIRED_PERMISSIONS && it.value == false)
-                    permissionGranted = false
-            }
-            if (!permissionGranted) {
-                Toast.makeText(baseContext,
-                    "Permission request denied",
-                    Toast.LENGTH_SHORT).show()
-            } else {
-                startCamera()
-            }
-        }
-}
-
- */

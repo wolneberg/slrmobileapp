@@ -8,6 +8,9 @@ pluginManagement {
             }
         }
         mavenCentral()
+        maven("https://oss.sonatype.org/content/repositories/snapshots"){
+            name = "ossrh-snapshot"
+        }
         gradlePluginPortal()
     }
 }
@@ -16,6 +19,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://oss.sonatype.org/content/repositories/snapshots"){
+            name = "ossrh-snapshot"
+        }
     }
 }
 
