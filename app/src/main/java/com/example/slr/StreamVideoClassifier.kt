@@ -116,6 +116,7 @@ class StreamVideoClassifier private constructor(
      * Run classify on a video and return a list include action and score.
      */
     fun classifyVideo(mmr: MediaMetadataRetriever): Pair<List<Category>, Long>{
+        Log.d(TAG, "Starting classification")
         val frames = videoFrames(mmr)
         val tensorvideo = bitmapArrayToByteBuffer(frames, 172, 172)
         inputState[IMAGE_INPUT_NAME] = tensorvideo
