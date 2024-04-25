@@ -53,6 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.label.Category
 import java.io.File
 import java.text.SimpleDateFormat
@@ -69,7 +70,6 @@ class RecordActivity: ComponentActivity(){
     }
 
     private var videoClassifier: StreamVideoClassifier? = null
-    private var numThread = 1
     private var recording: Recording? = null
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -268,18 +268,23 @@ class RecordActivity: ComponentActivity(){
             videoClassifier?.close()
             videoClassifier = null
         }
-        val options =
-            StreamVideoClassifier.StreamVideoClassifierOptions.builder()
-                .setMaxResult(MAX_RESULT)
-                .setNumThreads(numThread)
-                .build()
+        val options = StreamVideoClassifier.StreamVideoClassifierOptions.builder().setMaxResult(
+            MAX_RESULT)
+        if(compatList.isDelegateSupportedOnThisDevice){
+            // if the device has a supported GPU, add the GPU delegate
+            val delegateOptions = compatList.bestOptionsForThisDevice
+            options.setDelegate(GpuDelegate(delegateOptions))
+        } else {
+            // if the GPU is not supported, run on 4 threads
+            options.setNumThreads(NUM_THREADS)
+        }
         val modelFile = MODEL_A0_FILE
 
         videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
             this,
             modelFile,
             MODEL_LABEL_FILE,
-            options
+            options.build()
         )
 
         Log.d(TAG, "Classifier created.")

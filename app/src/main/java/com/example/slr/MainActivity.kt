@@ -25,15 +25,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import org.tensorflow.lite.gpu.CompatibilityList
+import org.tensorflow.lite.gpu.GpuDelegate
 
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
+const val NUM_THREADS = 4
+val compatList = CompatibilityList()
 const val MODEL_A0_FILE = "14042024-161543.tflite"
 const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
 class MainActivity: ComponentActivity(){
 
     private var videoClassifier: StreamVideoClassifier? = null
-    private var numThread = 1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,18 +109,26 @@ class MainActivity: ComponentActivity(){
             videoClassifier?.close()
             videoClassifier = null
         }
-        val options =
-            StreamVideoClassifier.StreamVideoClassifierOptions.builder()
-                .setMaxResult(MAX_RESULT)
-                .setNumThreads(numThread)
-                .build()
+        val options = StreamVideoClassifier.StreamVideoClassifierOptions.builder().setMaxResult(
+            MAX_RESULT)
+
+        if(compatList.isDelegateSupportedOnThisDevice){
+            // if the device has a supported GPU, add the GPU delegate
+            val delegateOptions = compatList.bestOptionsForThisDevice
+            options.setDelegate(GpuDelegate(delegateOptions))
+            Log.i(TAG, "Gpu delegate is used")
+        } else {
+            // if the GPU is not supported, run on 4 threads
+            options.setNumThreads(NUM_THREADS)
+            Log.i(TAG, "No GPU, $NUM_THREADS number of threads instead")
+        }
         val modelFile = MODEL_A0_FILE
 
         videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
             this,
             modelFile,
             MODEL_LABEL_FILE,
-            options
+            options.build()
         )
 
         Log.d(TAG, "Classifier created.")

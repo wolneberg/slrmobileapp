@@ -8,6 +8,7 @@ import android.media.MediaMetadataRetriever
 import android.os.SystemClock
 import android.util.Log
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.GpuDelegate
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.label.Category
 import java.math.RoundingMode
@@ -173,7 +174,9 @@ class StreamVideoClassifier private constructor(
     }
 
     class StreamVideoClassifierOptions private constructor(
-        val maxResults: Int
+        val maxResults: Int,
+        val numThreads: Int,
+        val delegate: GpuDelegate?
     ) {
         companion object {
             fun builder() = Builder()
@@ -182,6 +185,7 @@ class StreamVideoClassifier private constructor(
         class Builder {
             private var numThreads: Int = -1
             private var maxResult: Int = -1
+            private var delegate: GpuDelegate? = null
 
             fun setNumThreads(numThreads: Int): Builder {
                 this.numThreads = numThreads
@@ -196,8 +200,13 @@ class StreamVideoClassifier private constructor(
                 return this
             }
 
+            fun setDelegate(delegate: GpuDelegate): Builder {
+                this.delegate = delegate
+                return this
+            }
+
             fun build(): StreamVideoClassifierOptions {
-                return StreamVideoClassifierOptions(this.maxResult)
+                return StreamVideoClassifierOptions(this.maxResult, this.numThreads, this.delegate)
             }
         }
     }
