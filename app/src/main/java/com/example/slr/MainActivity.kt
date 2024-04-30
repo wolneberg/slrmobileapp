@@ -86,6 +86,10 @@ class MainActivity: ComponentActivity(){
                             ", Score: "+results?.first?.get(1)?.score)
                     Text(text = "Label: "+ results?.first?.get(2)?.label +
                             ", Score: "+results?.first?.get(2)?.score)
+                    Text(text = "Label: "+ results?.first?.get(3)?.label +
+                            ", Score: "+results?.first?.get(3)?.score)
+                    Text(text = "Label: "+ results?.first?.get(4)?.label +
+                            ", Score: "+results?.first?.get(4)?.score)
                     Text(text = "Inference time: ${results?.second} ms")
                     Text(text = "Process and inference time: $processTime ms")
                 }
