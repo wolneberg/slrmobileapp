@@ -23,15 +23,14 @@ import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.CameraController
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.video.AudioConfig
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Cameraswitch
@@ -105,8 +104,7 @@ class RecordActivity: ComponentActivity(){
                     .padding(padding)){
                     CameraPreview(controller = controller,
                         modifier = Modifier
-                            .size(500.dp)
-                            .align(Alignment.TopCenter)
+                            .align(Alignment.TopCenter).fillMaxSize()
                     )
                     IconButton(
                         onClick = {
@@ -131,12 +129,12 @@ class RecordActivity: ComponentActivity(){
                                 .align(Alignment.TopEnd))
                     }
                     Log.d(TAG, results.value?.second.toString())
-                    if (results.value != null) {
-                        Column (
-                            modifier = Modifier.fillMaxWidth().offset(0.dp, (-150).dp).align(Alignment.BottomCenter),
-                            verticalArrangement = Arrangement.Top,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                    Column (
+                        modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(Color.White),
+                        verticalArrangement = Arrangement.Bottom,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (results.value != null) {
                             Text(text = "Label: "+ results.value?.first?.get(0)?.label +
                                     ", Score: "+results.value?.first?.get(0)?.score,
                                 fontWeight = FontWeight.ExtraBold)
@@ -151,25 +149,6 @@ class RecordActivity: ComponentActivity(){
                             Text(text = "Inference time: ${results.value?.second} ms")
                             Text(text = "Process and inference time: ${processTime.value} ms")
                         }
-                    }
-                    IconButton(
-                        onClick = { goBack() },
-                        modifier = Modifier
-                            .offset(16.dp, (-16).dp)
-                            .align(Alignment.BottomStart)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Go back"
-                        )
-                    }
-                    Row (
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
                         FilledTonalButton(
                             onClick = {
                                 recordVideo(controller, recordingStart, this@RecordActivity, mmr, results, processTime) }
@@ -177,6 +156,17 @@ class RecordActivity: ComponentActivity(){
                             Text(text =
                             if (recordingStart.value) "Stop Recording" else "Start Recording")
                         }
+                    }
+                    IconButton(
+                        onClick = { goBack() },
+                        modifier = Modifier
+                            .offset(16.dp, 0.dp)
+                            .align(Alignment.BottomStart)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Go back"
+                        )
                     }
                 }
             }
