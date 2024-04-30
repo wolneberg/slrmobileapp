@@ -15,7 +15,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.MediaStoreOutputOptions
 import androidx.camera.video.Recording
@@ -90,7 +89,6 @@ class RecordActivity: ComponentActivity(){
             val results: MutableState<Pair<List<Category>, Long>?> = remember{mutableStateOf(null) }
             val processTime: MutableState<Long?> = remember{ mutableStateOf(null) }
             val mmr = MediaMetadataRetriever()
-            createClassifier()
             BottomSheetScaffold(
                 scaffoldState = scaffoldState,
                 sheetPeekHeight = 0.dp,
@@ -253,29 +251,5 @@ class RecordActivity: ComponentActivity(){
         return CAMERAX_PERMISSIONS.all { ContextCompat.checkSelfPermission(
             applicationContext, it
         ) == PackageManager.PERMISSION_GRANTED }
-    }
-    /**
-     * Initialize the TFLite video classifier.
-     */
-    @androidx.annotation.OptIn(ExperimentalGetImage::class) private  fun createClassifier() {
-        if (videoClassifier != null) {
-            videoClassifier?.close()
-            videoClassifier = null
-        }
-        val options =
-            StreamVideoClassifier.StreamVideoClassifierOptions.builder()
-                .setMaxResult(MAX_RESULT)
-                .setNumThreads(numThread)
-                .build()
-        val modelFile = MODEL_A0_FILE
-
-        videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
-            this,
-            modelFile,
-            MODEL_LABEL_FILE,
-            options
-        )
-
-        Log.d(TAG, "Classifier created.")
     }
 }

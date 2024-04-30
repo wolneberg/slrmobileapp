@@ -1,5 +1,8 @@
 package com.example.slr
 
+import ai.onnxruntime.OrtEnvironment
+import ai.onnxruntime.OrtSession
+import ai.onnxruntime.extensions.OrtxPackage
 import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -11,8 +14,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.OptIn
-import androidx.camera.core.ExperimentalGetImage
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,15 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
-const val TAG = "TFLite-VidClassify"
-const val MAX_RESULT = 5
-const val MODEL_A0_FILE = "Movinet-a0-8.tflite"
-const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
+const val TAG = "Onnx-VidClassify"
 class MainActivity: ComponentActivity(){
 
-    private var videoClassifier: StreamVideoClassifier? = null
-    private var numThread = 1
-
+    private var videoClassifier: OnnxClassifier? = null
+    private var ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
+    private lateinit var ortSession: OrtSession
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -43,7 +41,14 @@ class MainActivity: ComponentActivity(){
                 result.value = it
             }
             val mmr = MediaMetadataRetriever()
-            createClassifier()
+
+            // Initialize Ort Session and register the onnxruntime extensions package that contains the custom operators.
+            // Note: These are used to decode the input image into the format the original model requires,
+            // and to encode the model output into png format
+            val sessionOptions: OrtSession.SessionOptions = OrtSession.SessionOptions()
+            sessionOptions.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
+            ortSession = ortEnv.createSession(readModel(), sessionOptions)
+            videoClassifier = OnnxClassifier()
             Column(
                 modifier = Modifier.fillMaxHeight(),
                 verticalArrangement = Arrangement.Center,
@@ -76,20 +81,14 @@ class MainActivity: ComponentActivity(){
                 if (result.value != null) {
                     val startTime = SystemClock.elapsedRealtime()
                     mmr.setDataSource(this@MainActivity, result.value)
-                    val results = videoClassifier?.classifyVideo(mmr)
+                    val results = videoClassifier?.detect(mmr, readClasses(), ortEnv, ortSession)
                     val processTime = SystemClock.elapsedRealtime() - startTime
                     Log.d(TAG, "Finished classifying video")
-                    Text(text = "Label: "+ results?.first?.get(0)?.label +
-                            ", Score: "+results?.first?.get(0)?.score,
-                        fontWeight = FontWeight.ExtraBold)
-                    Text(text = "Label: "+ results?.first?.get(1)?.label +
-                            ", Score: "+results?.first?.get(1)?.score)
-                    Text(text = "Label: "+ results?.first?.get(2)?.label +
-                            ", Score: "+results?.first?.get(2)?.score)
-                    Text(text = "Label: "+ results?.first?.get(3)?.label +
-                            ", Score: "+results?.first?.get(3)?.score)
-                    Text(text = "Label: "+ results?.first?.get(4)?.label +
-                            ", Score: "+results?.first?.get(4)?.score)
+                    Text(text = "${results?.first?.get(0)}", fontWeight = FontWeight.ExtraBold)
+                    Text(text = "${results?.first?.get(1)}")
+                    Text(text = "${results?.first?.get(2)}")
+                    Text(text = "${results?.first?.get(3)}")
+                    Text(text = "${results?.first?.get(4)}")
                     Text(text = "Inference time: ${results?.second} ms")
                     Text(text = "Process and inference time: $processTime ms")
                 }
@@ -102,28 +101,12 @@ class MainActivity: ComponentActivity(){
         startActivity(intent)
     }
 
-    /**
-     * Initialize the TFLite video classifier.
-     */
-    @OptIn(ExperimentalGetImage::class) private fun createClassifier() {
-        if (videoClassifier != null) {
-            videoClassifier?.close()
-            videoClassifier = null
-        }
-        val options =
-            StreamVideoClassifier.StreamVideoClassifierOptions.builder()
-                .setMaxResult(MAX_RESULT)
-                .setNumThreads(numThread)
-                .build()
-        val modelFile = MODEL_A0_FILE
+    private fun readModel(): ByteArray {
+        val modelID = R.raw.i3d
+        return resources.openRawResource(modelID).readBytes()
+    }
 
-        videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
-            this,
-            modelFile,
-            MODEL_LABEL_FILE,
-            options
-        )
-
-        Log.d(TAG, "Classifier created.")
+    private fun readClasses(): List<String> {
+        return resources.openRawResource(R.raw.labels).bufferedReader().readLines()
     }
 }

@@ -81,6 +81,10 @@ dependencies {
 
     implementation("com.google.android.material:material:1.11.0-alpha01")
 
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:latest.release")
+    //implementation("com.microsoft.onnxruntime:onnxruntime-mobile:latest.release")
+    implementation("com.microsoft.onnxruntime:onnxruntime-extensions-android:latest.release")
+
     implementation("org.tensorflow:tensorflow-lite:2.14.0")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
     implementation("org.tensorflow:tensorflow-lite-metadata:0.4.4")
