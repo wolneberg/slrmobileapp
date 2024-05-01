@@ -16,22 +16,6 @@ import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.max
 
-/*
- * Copyright 2022 The TensorFlow Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 class StreamVideoClassifier private constructor(
      private val interpreter: Interpreter,
      private val labels: List<String>,
@@ -118,7 +102,7 @@ class StreamVideoClassifier private constructor(
     fun classifyVideo(mmr: MediaMetadataRetriever): Pair<List<Category>, Long>{
         Log.d(TAG, "Starting classification")
         val frames = videoFrames(mmr)
-        val tensorvideo = bitmapArrayToByteBuffer(frames, 172, 172)
+        val tensorvideo = bitmapArrayToByteBuffer(frames, RESOLUTION, RESOLUTION)
         inputState[IMAGE_INPUT_NAME] = tensorvideo
 
         // Initialize a placeholder to store the output objects.
@@ -203,6 +187,9 @@ class StreamVideoClassifier private constructor(
     }
 }
 
+/**
+ *
+ */
 fun softmax(floatArray: FloatArray): FloatArray {
     var total = 0f
     val result = FloatArray(floatArray.size)
@@ -217,8 +204,10 @@ fun softmax(floatArray: FloatArray): FloatArray {
     return result
 }
 
-const val NUM_FRAMES = 20
 
+/**
+ * Getting 20 evenly spread frames from a video and return them as an array of Bitmaps
+ */
 fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
     var frames = emptyArray<Bitmap>()
     var durationMs = 0.0
@@ -237,11 +226,14 @@ fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
         } else{
             Log.d("No bitmap", "Found no bitmap at frame: $timeUs")
         }
-
     }
     return frames
 }
 
+/**
+ * Convert array of Bitmaps to a ByteBuffer
+ * https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+ */
 fun bitmapArrayToByteBuffer(
     bitmaps: Array<Bitmap>,
     width: Int,
@@ -267,15 +259,18 @@ fun bitmapArrayToByteBuffer(
                 inputImage.putFloat(((value and 0xFF) - mean) / std)
             }
         }
-
         scaledBitmap.recycle()  // Free memory after processing
+        bitmap.recycle()
     }
 
     inputImage.rewind()
     return inputImage
 }
 
-// https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+/**
+ * Scale Bitmap to given ratio while keeping ratio of original Bitmap
+ * https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+ */
 fun scaleBitmapAndKeepRatio(
     targetBmp: Bitmap,
     reqHeightInPixels: Int,
