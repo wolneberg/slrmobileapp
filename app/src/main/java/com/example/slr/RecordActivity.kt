@@ -67,6 +67,7 @@ class RecordActivity: ComponentActivity(){
     private val mmr = MediaMetadataRetriever()
     private var ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
     private lateinit var ortSession: OrtSession
+    private var sessionOptions: OrtSession.SessionOptions? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,8 +86,8 @@ class RecordActivity: ComponentActivity(){
             val results: MutableState<Pair<List<String>, Long>?> = remember{mutableStateOf(null) }
             val processTime: MutableState<Long?> = remember{ mutableStateOf(null) }
 
-            val sessionOptions: OrtSession.SessionOptions = OrtSession.SessionOptions()
-            sessionOptions.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
+            sessionOptions = OrtSession.SessionOptions()
+            sessionOptions?.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
             ortSession = ortEnv.createSession(readModel(), sessionOptions)
             videoClassifier = OnnxClassifier()
             Box(modifier = Modifier
@@ -247,6 +248,8 @@ class RecordActivity: ComponentActivity(){
         recording = null
         videoClassifier = null
         mmr.release()
+        sessionOptions?.close()
+        sessionOptions = null
         ortSession.close()
         ortEnv.close()
     }

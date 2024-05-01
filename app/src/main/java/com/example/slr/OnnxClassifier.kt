@@ -41,8 +41,6 @@ class OnnxClassifier {
                 val rawOutput = (output?.get(0)?.value) as Array<FloatArray>
                 // Step 5: set output result
                 val resultList = processOutput(rawOutput, labels)
-                inputTensor.close()
-                output.close()
                 return Pair(resultList, inferenceTime)
             }
         }

@@ -36,6 +36,7 @@ class MainActivity: ComponentActivity(){
     private var ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
     private lateinit var ortSession: OrtSession
     private val mmr = MediaMetadataRetriever()
+    private var sessionOptions: OrtSession.SessionOptions? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -46,8 +47,8 @@ class MainActivity: ComponentActivity(){
             // Initialize Ort Session and register the onnxruntime extensions package that contains the custom operators.
             // Note: These are used to decode the input image into the format the original model requires,
             // and to encode the model output into png format
-            val sessionOptions: OrtSession.SessionOptions = OrtSession.SessionOptions()
-            sessionOptions.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
+            sessionOptions = OrtSession.SessionOptions()
+            sessionOptions?.registerCustomOpLibrary(OrtxPackage.getLibraryPath())
             ortSession = ortEnv.createSession(readModel(), sessionOptions)
             videoClassifier = OnnxClassifier()
             Column(
@@ -116,6 +117,8 @@ class MainActivity: ComponentActivity(){
         super.onDestroy()
         videoClassifier = null
         mmr.release()
+        sessionOptions?.close()
+        sessionOptions = null
         ortSession.close()
         ortEnv.close()
     }
