@@ -213,6 +213,7 @@ fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
     var durationMs = 0.0
 
     val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+    Log.d(TAG, "Video length: $duration ms")
     if (duration !=null) {
         durationMs = duration.toDouble()
     }
