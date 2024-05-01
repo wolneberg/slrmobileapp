@@ -28,11 +28,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
 const val TAG = "Onnx-VidClassify"
+const val NUM_FRAMES = 20
+const val RESOLUTION = 224
 class MainActivity: ComponentActivity(){
 
     private var videoClassifier: OnnxClassifier? = null
     private var ortEnv: OrtEnvironment = OrtEnvironment.getEnvironment()
     private lateinit var ortSession: OrtSession
+    private val mmr = MediaMetadataRetriever()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -40,8 +43,6 @@ class MainActivity: ComponentActivity(){
             val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) {
                 result.value = it
             }
-            val mmr = MediaMetadataRetriever()
-
             // Initialize Ort Session and register the onnxruntime extensions package that contains the custom operators.
             // Note: These are used to decode the input image into the format the original model requires,
             // and to encode the model output into png format
@@ -90,7 +91,7 @@ class MainActivity: ComponentActivity(){
                     Text(text = "${results?.first?.get(3)}")
                     Text(text = "${results?.first?.get(4)}")
                     Text(text = "Inference time: ${results?.second} ms")
-                    Text(text = "Process and inference time: $processTime ms")
+                    Text(text = "Process time: $processTime ms")
                 }
             }
         }
@@ -99,6 +100,7 @@ class MainActivity: ComponentActivity(){
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
         startActivity(intent)
+        finish()
     }
 
     private fun readModel(): ByteArray {
@@ -108,5 +110,13 @@ class MainActivity: ComponentActivity(){
 
     private fun readClasses(): List<String> {
         return resources.openRawResource(R.raw.labels).bufferedReader().readLines()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        videoClassifier = null
+        mmr.release()
+        ortSession.close()
+        ortEnv.close()
     }
 }
