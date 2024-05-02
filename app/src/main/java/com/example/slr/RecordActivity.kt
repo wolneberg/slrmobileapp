@@ -76,7 +76,7 @@ class RecordActivity: ComponentActivity(){
         }
         setContent {
             val controller = remember {
-                LifecycleCameraController(applicationContext).apply {
+                LifecycleCameraController(this).apply {
                     setEnabledUseCases(
                         CameraController.VIDEO_CAPTURE
                     )
