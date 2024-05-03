@@ -247,8 +247,14 @@ fun bitmapArrayToByteBuffer(
     inputImage.order(ByteOrder.nativeOrder())
 
     for (bitmap in bitmaps) {
-        val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        // val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        val centerBitmap = if (bitmap.width >= bitmap.height){
+            Bitmap.createBitmap(bitmap, bitmap.width/2 - bitmap.height/2, 0, bitmap.height, bitmap.height)
+        }else{
+            Bitmap.createBitmap(bitmap, 0, bitmap.height/2 - bitmap.width/2, bitmap.width, bitmap.width)
+        }
         val intValues = IntArray(width * height)
+        val scaledBitmap = scaleBitmapAndKeepRatio(centerBitmap, width, height)
         scaledBitmap.getPixels(intValues, 0, width, 0, 0, width, height)
 
         // Normalize and add pixels for each Bitmap
