@@ -10,10 +10,10 @@ import android.graphics.RectF
 import android.media.MediaMetadataRetriever
 import android.os.SystemClock
 import android.util.Log
-import java.math.RoundingMode
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.Collections
+import kotlin.math.roundToInt
 
 
 class OnnxClassifier {
@@ -58,22 +58,26 @@ class OnnxClassifier {
  */
 fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
     var frames = emptyArray<Bitmap>()
-    var durationMs = 0.0
 
     val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+    val numberFrames = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)
     Log.d(TAG, "Video length: $duration ms")
-    if (duration !=null) {
-        durationMs = duration.toDouble()
-    }
 
-    val frameStep = (durationMs/ NUM_FRAMES).toBigDecimal().setScale(2, RoundingMode.DOWN).toDouble()
-    for (i in 0 until NUM_FRAMES){
-        val timeUs = (i*frameStep)
-        val bitmap = mmr.getFrameAtTime(timeUs.toLong())
-        if (bitmap!=null) {
-            frames += bitmap
-        } else{
-            Log.d("No bitmap", "Found no bitmap at frame: $timeUs")
+    val frameStep: Int
+    if (numberFrames!=null) {
+        frameStep = (numberFrames.toDouble()/ NUM_FRAMES).roundToInt()
+        for (i in 0 until NUM_FRAMES){
+            var frame = i*frameStep
+            if(frame >= numberFrames.toInt()){
+                frame = numberFrames.toInt()-1
+            }
+            val bitmap = mmr.getFrameAtIndex(frame)
+            if (bitmap!=null) {
+                frames += bitmap
+            } else{
+                Log.d("No bitmap", "Found no bitmap at frame: $frame")
+            }
+
         }
     }
     return frames
