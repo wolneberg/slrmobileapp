@@ -132,6 +132,11 @@ class RecordActivity: ComponentActivity(){
                         Text(text = "${results.value?.first?.get(4)}")
                         Text(text = "Inference time: ${results.value?.second} ms")
                         Text(text = "Process time: ${processTime.value} ms")
+                        Log.d(TAG, ""+results.value?.first?.get(0)+" "
+                                +results.value?.first?.get(1)+" "
+                                +results.value?.first?.get(2)+" "
+                                +results.value?.first?.get(3)+" "
+                                +results.value?.first?.get(4)+" ")
                     }
                     FilledTonalButton(
                         onClick = {
@@ -234,7 +239,7 @@ class RecordActivity: ComponentActivity(){
         return resources.openRawResource(R.raw.labels).bufferedReader().readLines()
     }
     private fun readModel(): ByteArray {
-        val modelID = R.raw.i3d
+        val modelID = R.raw.i3d_model
         return resources.openRawResource(modelID).readBytes()
     }
     private fun hasRequiredPermissions(): Boolean{

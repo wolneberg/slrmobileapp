@@ -93,6 +93,11 @@ class MainActivity: ComponentActivity(){
                     Text(text = "${results?.first?.get(4)}")
                     Text(text = "Inference time: ${results?.second} ms")
                     Text(text = "Process time: $processTime ms")
+                    Log.d(TAG, ""+results?.first?.get(0)+" "
+                            +results?.first?.get(1)+" "
+                            +results?.first?.get(2)+" "
+                            +results?.first?.get(3)+" "
+                            +results?.first?.get(4))
                 }
             }
         }
@@ -105,7 +110,7 @@ class MainActivity: ComponentActivity(){
     }
 
     private fun readModel(): ByteArray {
-        val modelID = R.raw.i3d
+        val modelID = R.raw.i3d_model
         return resources.openRawResource(modelID).readBytes()
     }
 
