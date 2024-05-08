@@ -94,6 +94,11 @@ class MainActivity: ComponentActivity(){
                             ", Score: "+results?.first?.get(4)?.score)
                     Text(text = "Inference time: ${results?.second} ms")
                     Text(text = "Process time: $processTime ms")
+                    Log.d(TAG, ""+results?.first?.get(0)?.label+":"+results?.first?.get(0)?.score+" "
+                            +results?.first?.get(1)?.label+":"+results?.first?.get(1)?.score+" "
+                            +results?.first?.get(2)?.label+":"+results?.first?.get(2)?.score+" "
+                            +results?.first?.get(3)?.label+":"+results?.first?.get(3)?.score+" "
+                            +results?.first?.get(4)?.label+":"+results?.first?.get(4)?.score)
                 }
             }
         }

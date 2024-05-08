@@ -131,6 +131,11 @@ class RecordActivity: ComponentActivity(){
                                 ", Score: "+results.value?.first?.get(4)?.score)
                         Text(text = "Inference time: ${results.value?.second} ms")
                         Text(text = "Process time: ${processTime.value} ms")
+                        Log.d(TAG, ""+results.value?.first?.get(0)?.label+":"+results.value?.first?.get(0)?.score+" "
+                                +results.value?.first?.get(1)?.label+":"+results.value?.first?.get(1)?.score+" "
+                                +results.value?.first?.get(2)?.label+":"+results.value?.first?.get(2)?.score+" "
+                                +results.value?.first?.get(3)?.label+":"+results.value?.first?.get(3)?.score+" "
+                                +results.value?.first?.get(4)?.label+":"+results.value?.first?.get(4)?.score+" ")
                     }
                     FilledTonalButton(
                         onClick = {
