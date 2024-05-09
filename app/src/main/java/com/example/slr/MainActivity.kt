@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
-const val MODEL_A0_FILE = "Movinet-a0-8.tflite"
+const val MODEL_FILE = "movinet-a1.tflite"
 const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
 const val NUM_FRAMES = 20
 const val RESOLUTION = 172
@@ -123,7 +123,7 @@ class MainActivity: ComponentActivity(){
                 .setMaxResult(MAX_RESULT)
                 .setNumThreads(numThread)
                 .build()
-        val modelFile = MODEL_A0_FILE
+        val modelFile = MODEL_FILE
 
         videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
             this,

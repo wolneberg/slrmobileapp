@@ -263,7 +263,7 @@ class RecordActivity: ComponentActivity(){
                 .setMaxResult(MAX_RESULT)
                 .setNumThreads(numThread)
                 .build()
-        val modelFile = MODEL_A0_FILE
+        val modelFile = MODEL_FILE
 
         videoClassifier = StreamVideoClassifier.createFromFileAndLabelsAndOptions(
             this,
