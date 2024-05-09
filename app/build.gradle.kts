@@ -84,7 +84,5 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:latest.release")
     //implementation("com.microsoft.onnxruntime:onnxruntime-mobile:latest.release")
     implementation("com.microsoft.onnxruntime:onnxruntime-extensions-android:latest.release")
-
-    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.14")
     }
 }
