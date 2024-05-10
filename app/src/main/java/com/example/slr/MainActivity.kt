@@ -28,7 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
-const val MODEL_FILE = "movinet-a2.tflite"
+const val MODEL_FILE = "movinet-a3.tflite"
 const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
 const val NUM_FRAMES = 20
 const val RESOLUTION = 172
