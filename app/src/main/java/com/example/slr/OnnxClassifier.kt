@@ -33,7 +33,7 @@ class OnnxClassifier {
             // Step 3: call ort inferenceSession run
             val startTime = SystemClock.elapsedRealtime()
             val output = ortSession.run(
-                Collections.singletonMap("input_1", inputTensor), setOf("prediction")
+                Collections.singletonMap("input_2", inputTensor), setOf("prediction")
             )
             val inferenceTime = SystemClock.elapsedRealtime()-startTime
             // Step 4: output analysis
