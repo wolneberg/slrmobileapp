@@ -28,12 +28,15 @@ import androidx.compose.ui.text.font.FontWeight
 
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
-const val MODEL_A0_FILE = "14042024-161543.tflite"
+const val MODEL_A0_FILE = "Movinet-a0-8.tflite"
 const val MODEL_LABEL_FILE = "WLASL_100_labels.txt"
+const val NUM_FRAMES = 20
+const val RESOLUTION = 172
 class MainActivity: ComponentActivity(){
 
     private var videoClassifier: StreamVideoClassifier? = null
     private var numThread = 1
+    private val mmr = MediaMetadataRetriever()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,7 +45,6 @@ class MainActivity: ComponentActivity(){
             val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) {
                 result.value = it
             }
-            val mmr = MediaMetadataRetriever()
             createClassifier()
             Column(
                 modifier = Modifier.fillMaxHeight(),
@@ -86,8 +88,17 @@ class MainActivity: ComponentActivity(){
                             ", Score: "+results?.first?.get(1)?.score)
                     Text(text = "Label: "+ results?.first?.get(2)?.label +
                             ", Score: "+results?.first?.get(2)?.score)
+                    Text(text = "Label: "+ results?.first?.get(3)?.label +
+                            ", Score: "+results?.first?.get(3)?.score)
+                    Text(text = "Label: "+ results?.first?.get(4)?.label +
+                            ", Score: "+results?.first?.get(4)?.score)
                     Text(text = "Inference time: ${results?.second} ms")
-                    Text(text = "Process and inference time: $processTime ms")
+                    Text(text = "Process time: $processTime ms")
+                    Log.d(TAG, ""+results?.first?.get(0)?.label+":"+results?.first?.get(0)?.score+" "
+                            +results?.first?.get(1)?.label+":"+results?.first?.get(1)?.score+" "
+                            +results?.first?.get(2)?.label+":"+results?.first?.get(2)?.score+" "
+                            +results?.first?.get(3)?.label+":"+results?.first?.get(3)?.score+" "
+                            +results?.first?.get(4)?.label+":"+results?.first?.get(4)?.score)
                 }
             }
         }
@@ -96,6 +107,7 @@ class MainActivity: ComponentActivity(){
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
         startActivity(intent)
+        finish()
     }
 
     /**
@@ -121,5 +133,12 @@ class MainActivity: ComponentActivity(){
         )
 
         Log.d(TAG, "Classifier created.")
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        videoClassifier?.close()
+        videoClassifier = null
+        mmr.release()
+
     }
 }

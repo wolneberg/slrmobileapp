@@ -10,27 +10,11 @@ import android.util.Log
 import org.tensorflow.lite.Interpreter
 import org.tensorflow.lite.support.common.FileUtil
 import org.tensorflow.lite.support.label.Category
-import java.math.RoundingMode
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.math.exp
 import kotlin.math.max
-
-/*
- * Copyright 2022 The TensorFlow Authors. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+import kotlin.math.roundToInt
 
 class StreamVideoClassifier private constructor(
      private val interpreter: Interpreter,
@@ -116,8 +100,9 @@ class StreamVideoClassifier private constructor(
      * Run classify on a video and return a list include action and score.
      */
     fun classifyVideo(mmr: MediaMetadataRetriever): Pair<List<Category>, Long>{
+        Log.d(TAG, "Starting classification")
         val frames = videoFrames(mmr)
-        val tensorvideo = bitmapArrayToByteBuffer(frames, 172, 172)
+        val tensorvideo = bitmapArrayToByteBuffer(frames, RESOLUTION, RESOLUTION)
         inputState[IMAGE_INPUT_NAME] = tensorvideo
 
         // Initialize a placeholder to store the output objects.
@@ -202,6 +187,9 @@ class StreamVideoClassifier private constructor(
     }
 }
 
+/**
+ *
+ */
 fun softmax(floatArray: FloatArray): FloatArray {
     var total = 0f
     val result = FloatArray(floatArray.size)
@@ -216,31 +204,41 @@ fun softmax(floatArray: FloatArray): FloatArray {
     return result
 }
 
-const val NUM_FRAMES = 20
 
+/**
+ * Getting 20 evenly spread frames from a video and return them as an array of Bitmaps
+ */
 fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
     var frames = emptyArray<Bitmap>()
-    var durationMs = 0.0
 
     val duration = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-    if (duration !=null) {
-        durationMs = duration.toDouble()
-    }
+    val numberFrames = mmr.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)
+    Log.d(TAG, "Video length: $duration ms")
 
-    val frameStep = (durationMs/ NUM_FRAMES).toBigDecimal().setScale(2, RoundingMode.DOWN).toDouble()
-    for (i in 0 until NUM_FRAMES){
-        val timeUs = (i*frameStep)
-        val bitmap = mmr.getFrameAtTime(timeUs.toLong())
-        if (bitmap!=null) {
-            frames += bitmap
-        } else{
-            Log.d("No bitmap", "Found no bitmap at frame: $timeUs")
+    val frameStep: Int
+    if (numberFrames!=null) {
+        frameStep = (numberFrames.toDouble()/ NUM_FRAMES).roundToInt()
+        for (i in 0 until NUM_FRAMES){
+            var frame = i*frameStep
+            if(frame >= numberFrames.toInt()){
+                frame = numberFrames.toInt()-1
+            }
+            val bitmap = mmr.getFrameAtIndex(frame)
+            if (bitmap!=null) {
+                frames += bitmap
+            } else{
+                Log.d("No bitmap", "Found no bitmap at frame: $frame")
+            }
+
         }
-
     }
     return frames
 }
 
+/**
+ * Convert array of Bitmaps to a ByteBuffer
+ * https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+ */
 fun bitmapArrayToByteBuffer(
     bitmaps: Array<Bitmap>,
     width: Int,
@@ -253,8 +251,14 @@ fun bitmapArrayToByteBuffer(
     inputImage.order(ByteOrder.nativeOrder())
 
     for (bitmap in bitmaps) {
-        val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        // val scaledBitmap = scaleBitmapAndKeepRatio(bitmap, width, height)
+        val centerBitmap = if (bitmap.width >= bitmap.height){
+            Bitmap.createBitmap(bitmap, bitmap.width/2 - bitmap.height/2, 0, bitmap.height, bitmap.height)
+        }else{
+            Bitmap.createBitmap(bitmap, 0, bitmap.height/2 - bitmap.width/2, bitmap.width, bitmap.width)
+        }
         val intValues = IntArray(width * height)
+        val scaledBitmap = scaleBitmapAndKeepRatio(centerBitmap, width, height)
         scaledBitmap.getPixels(intValues, 0, width, 0, 0, width, height)
 
         // Normalize and add pixels for each Bitmap
@@ -266,15 +270,18 @@ fun bitmapArrayToByteBuffer(
                 inputImage.putFloat(((value and 0xFF) - mean) / std)
             }
         }
-
         scaledBitmap.recycle()  // Free memory after processing
+        bitmap.recycle()
     }
 
     inputImage.rewind()
     return inputImage
 }
 
-// https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+/**
+ * Scale Bitmap to given ratio while keeping ratio of original Bitmap
+ * https://github.com/farmaker47/Segmentation_and_Style_Transfer/blob/master/app/src/main/java/com/soloupis/sample/ocr_keras/utils/ImageUtils.kt
+ */
 fun scaleBitmapAndKeepRatio(
     targetBmp: Bitmap,
     reqHeightInPixels: Int,
