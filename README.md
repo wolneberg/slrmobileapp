@@ -3,6 +3,5 @@
 ### File structure
 
 ### Branches in use
-* dev: for running MoViNet-a0 in TensorFlow Lite format, this is also the base branch for the rest of the TensorFlow Lite models
-  * movinet-a1
+* main: for running MoViNet models in TensorFlow Lite format
 * onnx: for running I3D in Onnx format.
