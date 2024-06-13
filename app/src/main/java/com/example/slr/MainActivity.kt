@@ -27,6 +27,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
+/**
+ * Inspired by TensorFlows tutorial for Android video classification with MoViNet stream
+ * https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+ * Adjusted for using ONNX instead of TensorFlow
+ */
 const val TAG = "Onnx-VidClassify"
 const val NUM_FRAMES = 20
 const val RESOLUTION = 224
@@ -83,7 +88,7 @@ class MainActivity: ComponentActivity(){
                 if (result.value != null) {
                     val startTime = SystemClock.elapsedRealtime()
                     mmr.setDataSource(this@MainActivity, result.value)
-                    val results = videoClassifier?.detect(mmr, readClasses(), ortEnv, ortSession)
+                    val results = videoClassifier?.classifyVideo(mmr, readClasses(), ortEnv, ortSession)
                     val processTime = SystemClock.elapsedRealtime() - startTime
                     Log.d(TAG, "Finished classifying video")
                     Text(text = "${results?.first?.get(0)}", fontWeight = FontWeight.ExtraBold)
@@ -103,17 +108,26 @@ class MainActivity: ComponentActivity(){
         }
     }
 
+    /**
+     * Go to recording page
+     */
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
         startActivity(intent)
         finish()
     }
 
+    /**
+     * Read the ONNX model file
+     */
     private fun readModel(): ByteArray {
         val modelID = R.raw.i3d_model
         return resources.openRawResource(modelID).readBytes()
     }
 
+    /**
+     * Read the label file containing the sign that can be identified
+     */
     private fun readClasses(): List<String> {
         return resources.openRawResource(R.raw.labels).bufferedReader().readLines()
     }

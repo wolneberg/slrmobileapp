@@ -52,6 +52,14 @@ import androidx.core.content.ContextCompat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Inspired by TensorFlows tutorial for Android video classification with MoViNet stream
+ * https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+ * and ONNX tutorial for object detection in an Android application
+ * https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android
+ * and combined with Camera X recording tutorial
+ * https://github.com/philipplackner/CameraXGuide/tree/recording-videos
+ */
 
 class RecordActivity: ComponentActivity(){
 
@@ -162,6 +170,11 @@ class RecordActivity: ComponentActivity(){
         }
     }
 
+    /**
+     * Recording a video and classifying the final video when recording is stopped
+     * Base method from Camera X tutorial and adapted to our use case
+     * https://github.com/philipplackner/CameraXGuide/tree/recording-videos
+     */
     private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>,
                             context: Context, mmr: MediaMetadataRetriever,
                             results: MutableState<Pair<List<String>,Long>?>, processTime: MutableState<Long?>){
@@ -216,7 +229,7 @@ class RecordActivity: ComponentActivity(){
                         val msg = "Video capture succeeded: " + "${event.outputResults.outputUri}"
                         val startTime = SystemClock.elapsedRealtime()
                         mmr.setDataSource(context, event.outputResults.outputUri)
-                        results.value = videoClassifier?.detect(mmr, readClasses(), ortEnv, ortSession)
+                        results.value = videoClassifier?.classifyVideo(mmr, readClasses(), ortEnv, ortSession)
                         processTime.value = SystemClock.elapsedRealtime() - startTime
                         Log.d(TAG, "Finished classifying video")
                         Toast.makeText(

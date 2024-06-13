@@ -15,10 +15,14 @@ import java.nio.ByteOrder
 import java.util.Collections
 import kotlin.math.roundToInt
 
-
+/**
+ * Inspired by TensorFlows tutorial for Android video classification with MoViNet stream
+ * https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+ * and ONNX tutorial for object detection in an Android application
+ * https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android
+ */
 class OnnxClassifier {
-    fun detect(mmr: MediaMetadataRetriever, labels: List<String>, ortEnv: OrtEnvironment, ortSession: OrtSession): Pair<List<String>, Long> {
-        // Step 1: convert video into byte array (raw image bytes)
+    fun classifyVideo(mmr: MediaMetadataRetriever, labels: List<String>, ortEnv: OrtEnvironment, ortSession: OrtSession): Pair<List<String>, Long> {
         Log.d(TAG, "Starting classification")
         val frames = videoFrames(mmr)
         val tensorvideo = bitmapArrayToByteBuffer(frames, RESOLUTION, RESOLUTION)
@@ -29,23 +33,28 @@ class OnnxClassifier {
             longArrayOf(1, NUM_FRAMES.toLong(), RESOLUTION.toLong(), RESOLUTION.toLong(),3),
             OnnxJavaType.FLOAT
         )
+
         inputTensor.use {
-            // Step 3: call ort inferenceSession run
+            // Call ort inferenceSession run
             val startTime = SystemClock.elapsedRealtime()
             val output = ortSession.run(
                 Collections.singletonMap("input_2", inputTensor), setOf("prediction")
             )
             val inferenceTime = SystemClock.elapsedRealtime()-startTime
-            // Step 4: output analysis
+            // Output analysis
             output.use {
                 val rawOutput = (output?.get(0)?.value) as Array<FloatArray>
-                // Step 5: set output result
+                // Set output result
                 val resultList = processOutput(rawOutput, labels)
                 return Pair(resultList, inferenceTime)
             }
         }
     }
 
+    /**
+     * Get the output from the prediction and refactor it to a list of strings with
+     * the label and its score
+     */
     private fun processOutput(output: Array<FloatArray>, labels: List<String>): List<String>{
         val listOfPredictions = output[0].toList()
         val resultList = listOfPredictions.zip(labels).sortedBy { it.first }.reversed()
@@ -54,7 +63,7 @@ class OnnxClassifier {
 
 }
 /**
- * Getting 20 evenly spread frames from a video and return them as an array of Bitmaps
+ * Getting 20 evenly spread out frames from a video and return them as an array of Bitmaps
  */
 fun videoFrames(mmr: MediaMetadataRetriever): Array<Bitmap> {
     var frames = emptyArray<Bitmap>()

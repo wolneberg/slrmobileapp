@@ -7,6 +7,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
 
+/**
+ * Code from Camera X tutorial:
+ * https://github.com/philipplackner/CameraXGuide/tree/recording-videos
+ */
 @Composable
 fun CameraPreview(
     controller: LifecycleCameraController,
