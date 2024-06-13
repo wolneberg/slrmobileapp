@@ -8,6 +8,6 @@ The code is inspired by and has used certain methods from two tutorials found on
 * A tutorial on using MoViNet stream version in an Android application for action recognition: https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
 
 ### Branches in use
-* main: for running MoViNet models in TensorFlow Lite format
-  * movinetA- branches are the same as the main branch but use other versions of MoViNet
+* main: for running MoViNet models in TensorFlow Lite format.
+  * movinetA- branches are the same as the main branch but use other versions of MoViNet.
 * onnx: for running I3D in Onnx format.
