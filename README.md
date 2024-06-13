@@ -7,6 +7,9 @@ The code is inspired by and has used certain methods from two tutorials found on
 * A tutorial on using Camera X in Android applications: https://github.com/philipplackner/CameraXGuide/tree/recording-videos
 * A tutorial on using MoViNet stream version in an Android application for action recognition: https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
 
+We learned how to use ONNX instead of TensorFlow from a tutorial on object recognition:
+* https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android
+
 ### Branches in use
 * main: for running MoViNet models in TensorFlow Lite format.
   * movinetA- branches are the same as the main branch but use other versions of MoViNet.
