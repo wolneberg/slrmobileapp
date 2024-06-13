@@ -1,5 +1,5 @@
-# SLR mobile Android app
-This repository is the automatic Sign Language Recognition application used in the master thesis of Helene Amlie and Ingrid Marie Wølneberg.
+# Isolated SLR for Android devices
+This repository contains the automatic isolated Sign Language Recognition application used in the master thesis of Helene Amlie and Ingrid Marie Wølneberg.
 The application has functionality for choosing a video on the mobile phone to be classified or recording a new video that will be classified after ending the recording.
 After classification, the top-5 predictions with scores, inference time, and processing time are displayed.
 
