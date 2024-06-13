@@ -51,6 +51,12 @@ import org.tensorflow.lite.support.label.Category
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Inspired by TensorFlows tutorial for Android video classification with MoViNet stream
+ * https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+ * and combined with Camera X recording tutorial
+ * https://github.com/philipplackner/CameraXGuide/tree/recording-videos
+ */
 
 class RecordActivity: ComponentActivity(){
 
@@ -161,7 +167,9 @@ class RecordActivity: ComponentActivity(){
     }
 
     /**
-     * Recording
+     * Recording a video and classifying the final video when recording is stopped
+     * Base method from Camera X tutorial and adapted to our use case
+     * https://github.com/philipplackner/CameraXGuide/tree/recording-videos
      */
     private fun recordVideo(controller: LifecycleCameraController, recordingStart: MutableState<Boolean>,
                             context: Context, mmr: MediaMetadataRetriever,

@@ -26,6 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 
+/**
+ * Inspired by TensorFlows tutorial for Android video classification with MoViNet stream
+ * https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+ */
+
 const val TAG = "TFLite-VidClassify"
 const val MAX_RESULT = 5
 const val MODEL_A0_FILE = "Movinet-a0-8.tflite"
@@ -104,6 +109,9 @@ class MainActivity: ComponentActivity(){
         }
     }
 
+    /**
+     * Go to recording page
+     */
     private fun goToRecord(){
         val intent = Intent(this, RecordActivity::class.java)
         startActivity(intent)
