@@ -10,6 +10,13 @@ The code is inspired by and has used certain methods from two tutorials found on
 We learned how to use ONNX instead of TensorFlow from a tutorial on object recognition:
 * https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android
 
+### File structure
+* app/src/main/java/com/example/slr contains all the main functionality of the application
+     * MainActivity contains the page for loading a video from the mobile device
+     * RecordAcivity contains the page for recording a video
+     * StreamVideoClassifier has the code for using the SLR model, processing input and output, and calculating inference time.
+* app/src/main/assets contain the TensorFlow Lite model file and the text file with the labels
+
 ### Branches in use
 * main: for running MoViNet models in TensorFlow Lite format.
   * movinetA- branches are the same as the main branch but use other versions of MoViNet.
