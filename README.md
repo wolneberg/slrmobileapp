@@ -3,12 +3,11 @@ This repository contains the automatic isolated Sign Language Recognition applic
 The application has functionality for choosing a video on the mobile phone to be classified or recording a new video that will be classified after ending the recording.
 After classification, the top-5 predictions with scores, inference time, and processing time are displayed.
 
-The code is inspired by and has used certain methods from two tutorials found online:
-* A tutorial on using Camera X in Android applications: https://github.com/philipplackner/CameraXGuide/tree/recording-videos
-* A tutorial on using MoViNet stream version in an Android application for action recognition: https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android
+The code is inspired by and has used certain methods from two public repositories:
+* [Camera X tutorial]( https://github.com/philipplackner/CameraXGuide/tree/recording-videos) for Android applications.
+* Using the [MoViNet stream version in an Android application](https://github.com/tensorflow/examples/tree/master/lite/examples/video_classification/android) for action recognition.
 
-We learned how to use ONNX instead of TensorFlow from a tutorial on object recognition:
-* https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android
+We learned how to use ONNX instead of TensorFlow from a [ONNX tutorial on object recognition](https://github.com/microsoft/onnxruntime-inference-examples/tree/main/mobile/examples/object_detection/android).
 
 ### File structure
 * app/src/main/java/com/example/slr contains all the main functionality of the application
